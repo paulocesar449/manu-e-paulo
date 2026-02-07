@@ -71,7 +71,7 @@ document.getElementById('surpriseBtn').addEventListener('click', function() {
 
 // Função de contador
 function updateCountdown() {
-    const startDate = new Date('2025-02-06T00:00:00');
+    const startDate = new Date('2025-02-07T00:00:00');
     const now = new Date();
     const diff = now - startDate;
     
@@ -350,3 +350,4 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
+
