@@ -941,13 +941,36 @@ body {
     justify-content: center;
     background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
     border-style: dashed;
-    cursor: default;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
 .month-modal-photo.empty:hover {
-    transform: none;
-    border-color: #333;
-    box-shadow: none;
+    border-color: #ff4757;
+    border-style: solid;
+    box-shadow: 0 0 15px rgba(255, 71, 87, 0.5);
+    transform: scale(1.03);
+}
+
+.month-modal-photo.empty:hover .plus-icon {
+    color: #ff4757;
+    transform: rotate(90deg) scale(1.2);
+}
+
+.month-modal-photo.empty:active {
+    transform: scale(0.96);
+}
+
+@keyframes border-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); border-color: #ff4757; }
+    50%  { box-shadow: 0 0 0 8px rgba(255, 71, 87, 0); border-color: #ff7979; }
+    100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); border-color: #ff4757; }
+}
+
+.month-modal-photo.empty.clicked {
+    animation: border-pulse 0.6s ease;
+    border-color: #ff4757;
+    border-style: solid;
 }
 
 /* Modal de Foto Individual */
