@@ -238,6 +238,46 @@ function openMonthModal(monthName, year, mainMediaSlots) {
             plusIcon.className = 'plus-icon';
             plusIcon.textContent = '+';
             mediaDiv.appendChild(plusIcon);
+
+            // Evento de clique para fazer upload via Supabase
+            mediaDiv.addEventListener('click', function() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.click();
+
+                input.addEventListener('change', async function() {
+                    const arquivo = input.files[0];
+                    if (!arquivo) return;
+
+                    const nomeArquivo = `${Date.now()}-${arquivo.name}`;
+                    const titulo = document.getElementById('monthModalTitle').textContent;
+
+                    mediaDiv.innerHTML = '<span style="color:#fff;font-size:12px;text-align:center;">Enviando...</span>';
+
+                    const supabaseClient = window.supabase.createClient(
+                        'https://aljoovynsfkxokgtgwpf.supabase.co',
+                        'sb_publishable_sibrj9AyI7-diEEIfhmDQQ_lszPm7fM'
+                    );
+
+                    const { error: erroUpload } = await supabaseClient.storage
+                        .from('fotos')
+                        .upload(nomeArquivo, arquivo);
+
+                    if (erroUpload) {
+                        alert('Erro no upload: ' + erroUpload.message);
+                        mediaDiv.innerHTML = '<span class="plus-icon">+</span>';
+                        return;
+                    }
+
+                    const { data } = supabaseClient.storage.from('fotos').getPublicUrl(nomeArquivo);
+
+                    await supabaseClient.from('fotos').insert({ url: data.publicUrl, mes: titulo });
+
+                    mediaDiv.classList.remove('empty');
+                    mediaDiv.innerHTML = `<img src="${data.publicUrl}" alt="Foto" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" />`;
+                });
+            });
         }
         
         monthModalGrid.appendChild(mediaDiv);
@@ -245,6 +285,23 @@ function openMonthModal(monthName, year, mainMediaSlots) {
     
     monthModal.classList.add('active');
     document.body.style.overflow = 'hidden';
+
+    // Carregar fotos salvas no Supabase para este mês
+    const titulo = `${monthName} ${year}`;
+    const supabaseClient = window.supabase.createClient(
+        'https://aljoovynsfkxokgtgwpf.supabase.co',
+        'sb_publishable_sibrj9AyI7-diEEIfhmDQQ_lszPm7fM'
+    );
+    supabaseClient.from('fotos').select('*').eq('mes', titulo).order('criado_em', { ascending: true })
+        .then(({ data: fotos }) => {
+            if (!fotos || fotos.length === 0) return;
+            const slotsVazios = document.querySelectorAll('.month-modal-photo.empty');
+            fotos.forEach((foto, i) => {
+                if (!slotsVazios[i]) return;
+                slotsVazios[i].classList.remove('empty');
+                slotsVazios[i].innerHTML = `<img src="${foto.url}" alt="Foto" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" />`;
+            });
+        });
 }
 
 function closeMonthModal() {
@@ -350,4 +407,3 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
-
