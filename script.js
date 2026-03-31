@@ -241,6 +241,10 @@ function openMonthModal(monthName, year, mainMediaSlots) {
 
             // Evento de clique para fazer upload via Supabase
             mediaDiv.addEventListener('click', function() {
+                // Animação de borda vermelha ao clicar
+                mediaDiv.classList.add('clicked');
+                setTimeout(() => mediaDiv.classList.remove('clicked'), 600);
+
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.accept = 'image/*';
@@ -250,10 +254,15 @@ function openMonthModal(monthName, year, mainMediaSlots) {
                     const arquivo = input.files[0];
                     if (!arquivo) return;
 
-                    const nomeArquivo = `${Date.now()}-${arquivo.name}`;
                     const titulo = document.getElementById('monthModalTitle').textContent;
+                    mediaDiv.innerHTML = '<span style="color:#fff;font-size:12px;text-align:center;">Comprimindo...</span>';
+
+                    // Comprimir imagem antes do upload
+                    const arquivoComprimido = await comprimirImagem(arquivo, 1200, 0.75);
 
                     mediaDiv.innerHTML = '<span style="color:#fff;font-size:12px;text-align:center;">Enviando...</span>';
+
+                    const nomeArquivo = `${Date.now()}-${arquivo.name}`;
 
                     const supabaseClient = window.supabase.createClient(
                         'https://aljoovynsfkxokgtgwpf.supabase.co',
@@ -262,7 +271,7 @@ function openMonthModal(monthName, year, mainMediaSlots) {
 
                     const { error: erroUpload } = await supabaseClient.storage
                         .from('fotos')
-                        .upload(nomeArquivo, arquivo);
+                        .upload(nomeArquivo, arquivoComprimido);
 
                     if (erroUpload) {
                         alert('Erro no upload: ' + erroUpload.message);
@@ -407,3 +416,43 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
+
+
+// Função de compressão de imagem
+function comprimirImagem(arquivo, maxDimensao, qualidade) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(arquivo);
+        reader.onload = function(e) {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Redimensiona mantendo proporção
+                if (width > height) {
+                    if (width > maxDimensao) {
+                        height = Math.round(height * maxDimensao / width);
+                        width = maxDimensao;
+                    }
+                } else {
+                    if (height > maxDimensao) {
+                        width = Math.round(width * maxDimensao / height);
+                        height = maxDimensao;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    resolve(blob);
+                }, 'image/jpeg', qualidade);
+            };
+        };
+    });
+}
