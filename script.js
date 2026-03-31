@@ -232,60 +232,65 @@ function openMonthModal(monthName, year, mainMediaSlots) {
                 openPhotoModal(mediaIndex);
             });
         } else {
-            // Slot vazio
+            // Slot vazio — input DENTRO do label para funcionar no celular
             mediaDiv.classList.add('empty');
+
+            const label = document.createElement('label');
+            label.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+
             const plusIcon = document.createElement('span');
             plusIcon.className = 'plus-icon';
             plusIcon.textContent = '+';
-            mediaDiv.appendChild(plusIcon);
+            label.appendChild(plusIcon);
 
-            // Evento de clique para fazer upload via Supabase
-            mediaDiv.addEventListener('click', function() {
-                // Animação de borda vermelha ao clicar
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.style.display = 'none';
+            label.appendChild(fileInput);
+
+            mediaDiv.appendChild(label);
+
+            // Animação ao clicar
+            label.addEventListener('click', function() {
                 mediaDiv.classList.add('clicked');
                 setTimeout(() => mediaDiv.classList.remove('clicked'), 600);
+            });
 
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*';
-                input.click();
+            fileInput.addEventListener('change', async function() {
+                const arquivo = fileInput.files[0];
+                if (!arquivo) return;
 
-                input.addEventListener('change', async function() {
-                    const arquivo = input.files[0];
-                    if (!arquivo) return;
+                const titulo = document.getElementById('monthModalTitle').textContent;
+                mediaDiv.innerHTML = '<span style="color:#fff;font-size:11px;text-align:center;padding:4px;">Comprimindo...</span>';
 
-                    const titulo = document.getElementById('monthModalTitle').textContent;
-                    mediaDiv.innerHTML = '<span style="color:#fff;font-size:12px;text-align:center;">Comprimindo...</span>';
+                const arquivoComprimido = await comprimirImagem(arquivo, 1200, 0.75);
 
-                    // Comprimir imagem antes do upload
-                    const arquivoComprimido = await comprimirImagem(arquivo, 1200, 0.75);
+                mediaDiv.innerHTML = '<span style="color:#fff;font-size:11px;text-align:center;padding:4px;">Enviando...</span>';
 
-                    mediaDiv.innerHTML = '<span style="color:#fff;font-size:12px;text-align:center;">Enviando...</span>';
+                const nomeArquivo = `${Date.now()}-${arquivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
 
-                    const nomeArquivo = `${Date.now()}-${arquivo.name}`;
+                const supabaseClient = window.supabase.createClient(
+                    'https://aljoovynsfkxokgtgwpf.supabase.co',
+                    'sb_publishable_sibrj9AyI7-diEEIfhmDQQ_lszPm7fM'
+                );
 
-                    const supabaseClient = window.supabase.createClient(
-                        'https://aljoovynsfkxokgtgwpf.supabase.co',
-                        'sb_publishable_sibrj9AyI7-diEEIfhmDQQ_lszPm7fM'
-                    );
+                const { error: erroUpload } = await supabaseClient.storage
+                    .from('fotos')
+                    .upload(nomeArquivo, arquivoComprimido, { contentType: 'image/jpeg' });
 
-                    const { error: erroUpload } = await supabaseClient.storage
-                        .from('fotos')
-                        .upload(nomeArquivo, arquivoComprimido);
+                if (erroUpload) {
+                    alert('Erro: ' + erroUpload.message);
+                    mediaDiv.classList.add('empty');
+                    mediaDiv.innerHTML = '<span class="plus-icon">+</span>';
+                    return;
+                }
 
-                    if (erroUpload) {
-                        alert('Erro no upload: ' + erroUpload.message);
-                        mediaDiv.innerHTML = '<span class="plus-icon">+</span>';
-                        return;
-                    }
+                const { data } = supabaseClient.storage.from('fotos').getPublicUrl(nomeArquivo);
+                await supabaseClient.from('fotos').insert({ url: data.publicUrl, mes: titulo });
 
-                    const { data } = supabaseClient.storage.from('fotos').getPublicUrl(nomeArquivo);
-
-                    await supabaseClient.from('fotos').insert({ url: data.publicUrl, mes: titulo });
-
-                    mediaDiv.classList.remove('empty');
-                    mediaDiv.innerHTML = `<img src="${data.publicUrl}" alt="Foto" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" />`;
-                });
+                mediaDiv.classList.remove('empty');
+                mediaDiv.innerHTML = `<img src="${data.publicUrl}" alt="Foto" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" />`;
             });
         }
         
